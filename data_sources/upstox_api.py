@@ -1,17 +1,28 @@
 import pandas as pd
 import requests
+from io import StringIO
 from alerts.telegram_bot import send_alert, send_error_alert
 
-# ✅ नवा instruments CSV URL (Upstox public link)
+# ✅ नवा instruments CSV URL
 INSTRUMENTS_URL = "https://assets.upstox.com/market-quote/instruments/upstox_instruments.csv"
 
 def get_master_instruments(symbol: str):
     """
-    Fetch master instruments from Upstox CSV and filter by symbol
+    Fetch master instruments from Upstox CSV and filter by trading_symbol
     """
     try:
-        df = pd.read_csv(INSTRUMENTS_URL)
-        df = df[df['symbol'] == symbol]   # filter by symbol column
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; StockBot/1.0)"
+        }
+        r = requests.get(INSTRUMENTS_URL, headers=headers, timeout=30)
+        r.raise_for_status()  # जर 403/404 error असेल तर थेट raise होईल
+
+        # CSV pandas मध्ये load करा
+        df = pd.read_csv(StringIO(r.text))
+
+        # ✅ Fix: RELIANCE → RELIANCE-EQ / FUT वगैरे match होईल
+        df = df[df['trading_symbol'].str.startswith(symbol)]
+
         if df.empty:
             send_error_alert(symbol, "Instrument key not found")
         return df
@@ -50,4 +61,3 @@ def fetch_option_chain(symbol: str):
     """
     df = get_nearest_expiry_options(symbol)
     return df if not df.empty else pd.DataFrame()
-
