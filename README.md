@@ -1,0 +1,1 @@
+# Indian Stock + Indices Bot\n\nScans 27 stocks and 3 indices every 5 minutes during market hours (9:15–15:30 IST).
