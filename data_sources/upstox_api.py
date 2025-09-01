@@ -7,6 +7,11 @@ from alerts.telegram_bot import send_alert, send_error_alert
 INSTRUMENTS_URL = "https://assets.upstox.com/market-quote/instruments/upstox_instruments.csv"
 
 
+def normalize_symbol(s: str) -> str:
+    """Normalize symbol for matching"""
+    return str(s).upper().replace(" ", "").replace("-", "").replace("&", "AND")
+
+
 def get_master_instruments(symbol: str):
     """
     Fetch master instruments from Upstox CSV and filter by trading_symbol
@@ -19,8 +24,12 @@ def get_master_instruments(symbol: str):
         # CSV pandas मध्ये load करा
         df = pd.read_csv(StringIO(r.text))
 
-        # ✅ Flexible match: RELIANCE → RELIANCE-EQ, NIFTY50 → NIFTY 50
-        df = df[df['trading_symbol'].str.contains(symbol, case=False, na=False)]
+        # ✅ Normalize दोन्ही बाजू
+        df["norm_symbol"] = df["trading_symbol"].apply(normalize_symbol)
+        target = normalize_symbol(symbol)
+
+        # Filter → normalized symbol वर
+        df = df[df["norm_symbol"].str.startswith(target)]
 
         if df.empty:
             send_error_alert(symbol, "Instrument key not found")
